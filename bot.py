@@ -1,5 +1,7 @@
 from aiogram import Bot, Dispatcher, executor, types
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
+import asyncio
+from aiogram import executor
 
 from config import BOT_TOKEN
 import handlers
@@ -56,4 +58,5 @@ dp.register_message_handler(handlers.payment_phone)
 
 
 if __name__ == "__main__":
+
     executor.start_polling(dp, skip_updates=True)
