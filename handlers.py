@@ -29,6 +29,7 @@ async def cmd_start(message: types.Message, state: FSMContext):
                 await message.answer("Assalomu aleykum! Marhamat, ismingiz va familiyangizni kiriting:")
                 await state.set_state(UserRegister.name)
 
+
 @router.message(UserRegister.name)
 async def save_user(message: types.Message, state: FSMContext):
     user_id = message.from_user.id
@@ -38,24 +39,34 @@ async def save_user(message: types.Message, state: FSMContext):
     clean_url = BACKEND_URL.rstrip('/') # Oxiridagi slashni olib tashlaymiz
     final_url = f"{clean_url}/users/"   # Backend kutayotgan aniq manzil
 
+@router.message(UserRegister.name)
+async def process_name(message: types.Message, state: FSMContext):
+    await state.update_data(full_name=message.text)
+    await message.answer("Endi pastdagi tugmani bosib, telefon raqamingizni yuboring:", 
+                         reply_markup=contact_keyboard())
+    await state.set_state(UserRegister.phone)
+
+@router.message(UserRegister.phone, F.contact)
+async def process_phone(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    user_id = message.from_user.id
+    username = message.from_user.username # @username ni olish
+    
+    payload = {
+        "user_id": user_id,
+        "user_name": data['full_name'],
+        "username": f"@{username}" if username else "Yo'q",
+        "phone": message.contact.phone_number
+    }
+
     async with aiohttp.ClientSession() as session:
-        try:
-            async with session.post(final_url, json={
-                "user_id": user_id,
-                "user_name": user_name
-            }, timeout=10) as resp:
-                
-                if resp.status in [200, 201]:
-                    await message.answer("✅ Rahmat! Ma'lumotlaringiz saqlandi.", reply_markup=main_menu())
-                    await state.clear()
-                else:
-                    # Backend qaytargan xatoni logga chiqaramiz
-                    error_text = await resp.text()
-                    print(f"Backend Error ({resp.status}): {error_text}")
-                    await message.answer(f"❌ Xatolik (Status: {resp.status}). Iltimos, keyinroq urinib ko'ring.")
-        except Exception as e:
-            print(f"Ulanishda xato: {e}")
-            await message.answer("❌ Backend bilan aloqa yo'q.")
+        async with session.post(f"{BACKEND_URL}/users/", json=payload) as resp:
+            if resp.status in [200, 201]:
+                await message.answer("✅ Ro'yxatdan o'tdingiz!", reply_markup=main_menu())
+                await state.clear()
+            else:
+                await message.answer("❌ Xatolik yuz berdi.")
+
 
 
 
@@ -255,6 +266,7 @@ async def save_payment_details(message: types.Message, state: FSMContext):
             pass
     await message.answer("✅ Ma'lumotlaringiz saqlandi va adminga yuborildi!", reply_markup=main_menu())
     await state.clear()
+
 
 
 
