@@ -28,31 +28,10 @@ async def show_profile(message: types.Message):
         except:
             await message.answer("Server bilan aloqa uzildi.")
 
-@router.message(F.text == "🌳 Daraxt yuborish")
-async def start_tree(message: types.Message, state: FSMContext):
-    await message.answer("Daraxt turini kiriting:")
-    await state.set_state(TreeForm.tree_type)
-
-@router.message(TreeForm.photo, F.photo)
-async def get_photo(message: types.Message, state: FSMContext):
-    data = await state.get_data()
-    # Foydalanuvchini bazaga yozish (yangi bo'lsa)
-    async with aiohttp.ClientSession() as session:
-        await session.post(f"{BACKEND_URL}/users", json={
-            "user_id": message.from_user.id,
-            "user_name": message.from_user.full_name
-        })
-    # Adminga yuborish
-    await message.bot.send_photo(ADMIN_ID, message.photo[-1].file_id, caption=f"🌳 Yangi daraxt: {data['tree_type']}", reply_markup=admin_keyboard(message.from_user.id))
-    await message.answer("✅ Ma'lumotlar saqlandi!")
-    await state.clear()
-
-# --- QO'LLANMA (Video va Ma'lumot) ---
+# --- QO'LLANMA ---
 @router.message(F.text == "📖 Qo'llanma")
 async def show_guide(message: types.Message):
-    # Bu yerga botdan olgan file_id ni qo'yasiz
-    video_id = "BAACAgIAAxkBAAIE4GmsCRtT9aUk6DA3x9-aj_ddmAxXAALtlAACm_BhSSm97-LFW-9qOgQ" # O'sha uzun kodni shu yerga yozing
-    
+    video_id = "BAACAgIAAxkBAAIE4GmsCRtT9aUk6DA3x9-aj_ddmAxXAALtlAACm_BhSSm97-LFW-9qOgQ" 
     guide_text = (
         "📖 **GreenPay bot qo'llanmasi**\n\n"
         "1️⃣ '🌳 Daraxt yuborish' tugmasini bosing.\n"
@@ -60,15 +39,9 @@ async def show_guide(message: types.Message):
         "3️⃣ Admin tasdiqlaganidan so'ng, to'lov ma'lumotlarini kiritasiz.\n\n"
         "🎥 Batafsil videoda ko'ring:"
     )
-    
     try:
-        await message.answer_video(
-            video=video_id,
-            caption=guide_text,
-            parse_mode="Markdown"
-        )
-    except Exception as e:
-        # Agar video yuborishda xato bo'lsa, matnni o'zini yuboradi
+        await message.answer_video(video=video_id, caption=guide_text, parse_mode="Markdown")
+    except:
         await message.answer(guide_text, parse_mode="Markdown")
 
 # --- DARAXT YUBORISH JARAYONI ---
@@ -92,6 +65,31 @@ async def set_location(message: types.Message, state: FSMContext):
 @router.message(TreeForm.photo, F.photo)
 async def get_photo(message: types.Message, state: FSMContext):
     data = await state.get_data()
+    file_id = message.photo[-1].file_id # Eng sifatli rasmni olish
+    
+    # 1. Foydalanuvchini bazaga yozish
+    async with aiohttp.ClientSession() as session:
+        await session.post(f"{BACKEND_URL}/users/", json={
+            "user_id": message.from_user.id,
+            "user_name": message.from_user.full_name,
+            "phone": "" # Agar schemas.py da bu maydon majburiy bo'lsa qo'shish kerak
+        })
+        
+        # 2. MUHIM: Daraxt ma'lumotlarini Backendga yuborish (Sizda shu narsa yo'q edi!)
+        tree_payload = {
+            "user_id": message.from_user.id,
+            "user_name": message.from_user.full_name,
+            "phone": "Noma'lum", # Keyinchalik to'g'rilash mumkin
+            "tree_type": data['tree_type'],
+            "latitude": data['lat'],
+            "longitude": data['lon'],
+            "photo": file_id
+        }
+        
+        # Bu yerdagi /trees/ manziliga murojaat qilinmoqda
+        tree_resp = await session.post(f"{BACKEND_URL}/trees/", json=tree_payload)
+        print(f"Backend javobi (Daraxt yuborish): {tree_resp.status}")
+
     caption = (f"🌳 **Yangi daraxt so'rovi!**\n\n"
                f"👤 Foydalanuvchi: {message.from_user.full_name}\n"
                f"🌲 Turi: {data['tree_type']}\n"
@@ -100,32 +98,27 @@ async def get_photo(message: types.Message, state: FSMContext):
     # Adminga yuborish
     await message.bot.send_photo(
         ADMIN_ID, 
-        message.photo[-1].file_id, 
+        file_id, 
         caption=caption, 
         reply_markup=admin_keyboard(message.from_user.id),
         parse_mode="Markdown"
     )
-    await message.answer("✅ Rahmat! Ma'lumotlar adminga yuborildi. Tasdiqlashni kuting.", reply_markup=main_menu())
+    
+    await message.answer("✅ Rahmat! Ma'lumotlar adminga yuborildi va bazaga saqlandi. Tasdiqlashni kuting.", reply_markup=main_menu())
     await state.clear()
 
 # --- ADMIN TASDIQLASHI VA AVTOMATIK TO'LOV ---
 @router.callback_query(F.data.startswith("accept_"))
 async def admin_accept(call: types.CallbackQuery):
-    # 1. ENG BIRINCHI navbatda shu qatorni qo'ying!
     await call.answer("Tasdiqlandi")
-    
     user_id = int(call.data.split("_")[1])
-    
-    # 2. Keyin qolgan jarayonlarni bajaring
     async with aiohttp.ClientSession() as session:
         try:
             async with session.get(f"{BACKEND_URL}/user/{user_id}") as resp:
                 user_data = await resp.json() if resp.status == 200 else {}
-                
                 if user_data.get('card') or user_data.get('phone_pay'):
                     card = user_data.get('card', "Mavjud emas")
                     phone = user_data.get('phone_pay', "Mavjud emas")
-                    
                     await call.bot.send_message(
                         ADMIN_ID, 
                         f"💰 **To'lov ma'lumotlari (Avtomatik):**\n\n👤 ID: {user_id}\n💳 Karta: `{card}`\n📱 Raqam: `{phone}`",
@@ -135,10 +128,8 @@ async def admin_accept(call: types.CallbackQuery):
                 else:
                     await call.bot.send_message(user_id, "✅ Daraxtingiz tasdiqlandi! To'lov ma'lumotlarini kiriting:", reply_markup=payment_keyboard())
         except Exception as e:
-            # Xatolikni logga chiqarish ham foydali
             print(f"Error in admin_accept: {e}")
             await call.bot.send_message(user_id, "✅ Tasdiqlandi, lekin to'lov ma'lumotlarini olishda xato yuz berdi.")
-
 
 # --- TO'LOV MA'LUMOTLARINI SAQLASH ---
 @router.message(F.text.in_(["💳 Karta", "📱 Telefon raqam"]))
@@ -153,17 +144,13 @@ async def save_payment_details(message: types.Message, state: FSMContext):
     data = await state.get_data()
     method = data['pay_method']
     val = message.text
-    
     async with aiohttp.ClientSession() as session:
         try:
-            # Backendda foydalanuvchi ma'lumotlarini yangilash
-            await session.post(f"{BACKEND_URL}/update_payment", json={
+            await session.post(f"{BACKEND_URL}/update_payment/", json={
                 "user_id": message.from_user.id,
                 "user_name": message.from_user.full_name,
                 method: val
             })
-            
-            # Adminga ham xabar yuboramiz
             await message.bot.send_message(
                 ADMIN_ID, 
                 f"🆕 **Yangi to'lov ma'lumotlari saqlandi:**\n👤 {message.from_user.full_name}\n📝 {method}: `{val}`",
@@ -171,14 +158,5 @@ async def save_payment_details(message: types.Message, state: FSMContext):
             )
         except:
             pass
-
     await message.answer("✅ Ma'lumotlaringiz saqlandi va adminga yuborildi!", reply_markup=main_menu())
     await state.clear()
-
-
-# @router.message(F.video)
-# async def get_video_id(message: types.Message):
-#     video_id = message.video.file_id
-#     # Markdown o'rniga oddiy matn qilib yuboramiz
-#     await message.answer(f"Sizning video file_id:\n\n{video_id}")
-
