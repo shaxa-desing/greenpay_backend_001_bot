@@ -1,8 +1,9 @@
 import os
 import aiohttp
-from aiogram import Router, F, types
+from aiogram import Router, F, types, Bot # <--- Bot ni shu yerga qo'shdik
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import StatesGroup, State
 from states import UserRegister, TreePlanting
 from keyboards import main_menu, contact_keyboard
 
@@ -104,4 +105,5 @@ async def save_tree(message: types.Message, state: FSMContext, bot: types.Bot): 
                         )
                         await message.answer("✅ Daraxt yuborildi. Admin tasdiqlashini kuting!")
                         await state.clear()
+
 
