@@ -28,6 +28,15 @@ async def start_cmd(message: types.Message, state: FSMContext):
                 await message.answer("Xush kelibsiz! Iltimos, ism-familiyangizni kiriting:")
                 await state.set_state(UserRegister.name)
 
+# Botning handlers.py faylida ro'yxatdan o'tish funksiyasida:
+print(f"URL: {BACKEND_URL}/users/")
+print(f"Payload: {payload}")
+
+async with session.post(f"{BACKEND_URL}/users/", json=payload) as resp:
+    status = resp.status
+    response_text = await resp.text()
+    print(f"Backend javobi: {status}, Text: {response_text}") # <--- SHUNI TEKSHIRING
+
 
 @router.message(UserRegister.name)
 async def save_user(message: types.Message, state: FSMContext):
@@ -265,6 +274,7 @@ async def save_payment_details(message: types.Message, state: FSMContext):
             pass
     await message.answer("✅ Ma'lumotlaringiz saqlandi va adminga yuborildi!", reply_markup=main_menu())
     await state.clear()
+
 
 
 
