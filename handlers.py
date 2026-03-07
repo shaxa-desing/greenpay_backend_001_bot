@@ -10,6 +10,33 @@ router = Router()
 
 # --- ASOSIY MENYU ---
 
+# State uchun: class UserRegister(StatesGroup): name = State()
+
+@router.message(Command("start"))
+async def cmd_start(message: types.Message, state: FSMContext):
+    user_id = message.from_user.id
+    
+    # Bazadan foydalanuvchini tekshiramiz
+    async with aiohttp.ClientSession() as session:
+        async with session.get(f"{BACKEND_URL}/user/{user_id}") as resp:
+            if resp.status == 200:
+                # Foydalanuvchi allaqachon mavjud
+                await message.answer("Assalomu aleykum! Xush kelibsiz.", reply_markup=main_menu())
+            else:
+                # Yangi foydalanuvchi
+                await message.answer("Assalomu aleykum! Marhamat, ismingiz va familiyangizni kiriting:")
+                await state.set_state(UserRegister.name)
+
+@router.message(UserRegister.name)
+async def save_user(message: types.Message, state: FSMContext):
+    async with aiohttp.ClientSession() as session:
+        await session.post(f"{BACKEND_URL}/users", json={
+            "user_id": message.from_user.id,
+            "user_name": message.text
+        })
+    await message.answer("Rahmat! Ma'lumotlaringiz saqlandi.", reply_markup=main_menu())
+    await state.clear()
+
 @router.message(Command("start"))
 async def cmd_start(message: types.Message, state: FSMContext):
     await state.clear()
@@ -18,15 +45,13 @@ async def cmd_start(message: types.Message, state: FSMContext):
 @router.message(F.text == "👤 Shaxsiy kabinet")
 async def show_profile(message: types.Message):
     async with aiohttp.ClientSession() as session:
-        try:
-            async with session.get(f"{BACKEND_URL}/user/{message.from_user.id}") as resp:
-                if resp.status == 200:
-                    user = await resp.json()
-                    await message.answer(f"👤 **Kabinet**\n🆔 ID: {user.get('user_id')}\n💳 Karta: {user.get('card', 'Yoq')}\n📱 Tel: {user.get('phone_pay', 'Yoq')}", parse_mode="Markdown")
-                else:
-                    await message.answer("Siz hali ro'yxatdan o'tmagansiz. Daraxt yuboring!")
-        except:
-            await message.answer("Server bilan aloqa uzildi.")
+        async with session.get(f"{BACKEND_URL}/user/{message.from_user.id}") as resp:
+            if resp.status == 200:
+                user = await resp.json()
+                # Shu yerga "Tahrirlash" tugmalari bo'lgan inline keyboard qo'shing
+                await message.answer(f"👤 Kabinet:\nIsm: {user['user_name']}\n💳 Karta: {user.get('card') or 'Yoq'}\n📱 Tel: {user.get('phone_pay') or 'Yoq'}")
+            else:
+                await message.answer("Siz ro'yxatdan o'tmagansiz.")
 
 # --- QO'LLANMA ---
 @router.message(F.text == "📖 Qo'llanma")
@@ -141,14 +166,25 @@ async def admin_accept(call: types.CallbackQuery):
 # --- ADMIN RAD ETISHI ---
 @router.callback_query(F.data.startswith("reject_"))
 async def admin_reject(call: types.CallbackQuery):
+    # 1. Tezkor javob
     await call.answer("Rad etildi")
     user_id = int(call.data.split("_")[1])
     
-    # Admindagi xabarni o'zgartirib qo'yamiz (Tugmalarni olib tashlaymiz)
-    await call.message.edit_caption(
-        caption=f"{call.message.caption}\n\n❌ **RAD ETILDI**",
-        reply_markup=None
-    )
+    # 2. Tugmalarni olib tashlash (edit_caption o'rniga faqat tugmalarni tozalash)
+    try:
+        await call.message.edit_reply_markup(reply_markup=None)
+    except:
+        pass # Agar tugmalar bo'lmasa, o'tkazib yuborish
+
+    # 3. Foydalanuvchiga xabar yuborish
+    try:
+        await call.bot.send_message(
+            user_id, 
+            "❌ Daraxtingiz ma'lumotlari admin tomonidan rad etildi. Iltimos, ma'lumotlarni tekshirib qaytadan yuboring.", 
+            reply_markup=main_menu()
+        )
+    except Exception as e:
+        print(f"Xabar yuborishda xato: {e}")
 
     # Foydalanuvchiga rad etilgani haqida xabar yuboramiz
     reject_text = (
@@ -193,4 +229,5 @@ async def save_payment_details(message: types.Message, state: FSMContext):
             pass
     await message.answer("✅ Ma'lumotlaringiz saqlandi va adminga yuborildi!", reply_markup=main_menu())
     await state.clear()
+
 
