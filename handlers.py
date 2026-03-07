@@ -2,8 +2,10 @@ import aiohttp
 from aiogram import Router, F, types
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from states import TreeForm, PaymentForm
+# handlers.py faylining tepasidagi importlar qatori
+from states import TreeForm, PaymentForm, UserRegister # <-- UserRegister ni qo'shing
 from keyboards import main_menu, location_keyboard, admin_keyboard, payment_keyboard
+
 from config import BACKEND_URL, ADMIN_ID
 
 router = Router()
@@ -229,5 +231,6 @@ async def save_payment_details(message: types.Message, state: FSMContext):
             pass
     await message.answer("✅ Ma'lumotlaringiz saqlandi va adminga yuborildi!", reply_markup=main_menu())
     await state.clear()
+
 
 
