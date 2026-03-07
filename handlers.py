@@ -31,13 +31,26 @@ async def cmd_start(message: types.Message, state: FSMContext):
 
 @router.message(UserRegister.name)
 async def save_user(message: types.Message, state: FSMContext):
+    user_id = message.from_user.id
+    user_name = message.text
+
     async with aiohttp.ClientSession() as session:
-        await session.post(f"{BACKEND_URL}/users", json={
-            "user_id": message.from_user.id,
-            "user_name": message.text
-        })
-    await message.answer("Rahmat! Ma'lumotlaringiz saqlandi.", reply_markup=main_menu())
-    await state.clear()
+        # DIQQAT: /users emas, /users/ bo'lishi shart!
+        async with session.post(f"{BACKEND_URL}/users/", json={
+            "user_id": user_id,
+            "user_name": user_name
+        }) as resp:
+            
+            if resp.status in [200, 201]: # Agar backend muvaffaqiyatli saqlasa
+                await message.answer("✅ Rahmat! Ma'lumotlaringiz muvaffaqiyatli saqlandi.", reply_markup=main_menu())
+                await state.clear()
+            else:
+                # Agar xato bo'lsa, foydalanuvchiga bildiramiz
+                error_data = await resp.text()
+                print(f"Backend xatosi: {error_data}")
+                await message.answer("❌ Xatolik yuz berdi. Iltimos, birozdan so'ng qayta urinib ko'ring.")
+
+
 
 @router.message(Command("start"))
 async def cmd_start(message: types.Message, state: FSMContext):
@@ -231,6 +244,7 @@ async def save_payment_details(message: types.Message, state: FSMContext):
             pass
     await message.answer("✅ Ma'lumotlaringiz saqlandi va adminga yuborildi!", reply_markup=main_menu())
     await state.clear()
+
 
 
 
