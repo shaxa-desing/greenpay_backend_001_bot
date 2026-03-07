@@ -8,6 +8,32 @@ import handlers
 
 from states import TreeForm, PaymentForm
 
+from fastapi import FastAPI, Depends, HTTPException
+from sqlalchemy.orm import Session
+import models, schemas, database
+
+app = FastAPI()
+
+# Foydalanuvchini olish
+@app.get("/user/{user_id}")
+def read_user(user_id: int, db: Session = Depends(database.get_db)):
+    user = db.query(models.User).filter(models.User.user_id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Topilmadi")
+    return user
+
+# Foydalanuvchini yaratish yoki mavjud bo'lsa qaytarish
+@app.post("/users")
+def create_user(user: schemas.UserCreate, db: Session = Depends(database.get_db)):
+    db_user = db.query(models.User).filter(models.User.user_id == user.user_id).first()
+    if db_user:
+        return db_user
+    new_user = models.User(user_id=user.user_id, user_name=user.user_name)
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    return new_user
+
 bot = Bot(BOT_TOKEN)
 
 storage = MemoryStorage()
@@ -61,4 +87,5 @@ if __name__ == "__main__":
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     executor.start_polling(dp, skip_updates=True)
+
 
