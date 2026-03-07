@@ -9,7 +9,7 @@ from keyboards import main_menu, contact_keyboard
 router = Router()
 
 # DIQQAT: O'zingizning Railway Backend URL manzilingizni shu yerga yozing!
-BACKEND_URL = os.getenv("BACKEND_URL", "https://SIZNING-BACKEND-URL-MANZILINGIZ.up.railway.app").rstrip('/')
+BACKEND_URL = os.getenv("BACKEND_URL", "https://greenpaybackend-production.up.railway.app").rstrip('/')
 
 @router.message(Command("start"))
 async def start_cmd(message: types.Message, state: FSMContext):
@@ -107,3 +107,4 @@ async def save_tree(message: types.Message, state: FSMContext):
                         await message.answer("❌ Xatolik yuz berdi.")
             else:
                 await message.answer("Siz ro'yxatdan o'tmagansiz. /start ni bosing.")
+
