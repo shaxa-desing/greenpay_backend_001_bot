@@ -105,24 +105,23 @@ async def approve_tree(callback: types.CallbackQuery):
     await callback.answer("Daraxt tasdiqlandi")
 
 
+@router.message(F.text == "👤 Shaxsiy kabinet")
+async def show_profile(message: types.Message):
+    user_id = message.from_user.id
+    async with aiohttp.ClientSession() as session:
+        # Backenddan foydalanuvchini so'raymiz
+        async with session.get(f"{BACKEND_URL}/user/{user_id}") as resp:
+            if resp.status == 200:
+                user = await resp.json()
+                text = (f"👤 **Sizning profilingiz:**\n\n"
+                        f"🆔 ID: `{user['user_id']}`\n"
+                        f"👤 Ism: {user['full_name']}\n"
+                        f"📱 Telefon: {user['phone'] or 'Kiritilmagan'}")
+                await message.answer(text, parse_mode="Markdown")
+            else:
+                # Agar 404 bo'lsa, ro'yxatdan o'tishni so'raymiz
+                await message.answer("⚠️ Profilingiz topilmadi. Iltimos, /start ni bosing.")
 
-# Callback uchun handler
-@router.callback_query(F.data.startswith("approve_"))
-async def approve_tree(callback: types.CallbackQuery):
-    # Bu yerda backendga statusni 'approved' deb yuboramiz
-    await callback.message.edit_caption(caption="✅ Daraxt tasdiqlandi!")
-
-@router.message(Command("help"))
-async def help_cmd(message: types.Message):
-    text = """
-    📘 **Qo'llanma:**
-    1. **/start** - Ro'yxatdan o'tish.
-    2. **🌳 Daraxt ekish** - Daraxt nomi, rasm va lokatsiyani yuboring.
-    3. **👤 Shaxsiy kabinet** - Ma'lumotlaringizni ko'rish.
-    
-    *Daraxtingiz admin tomonidan tasdiqlangach, xaritada ko'rinadi!*
-    """
-    await message.answer(text, parse_mode="Markdown")
 
 
 
