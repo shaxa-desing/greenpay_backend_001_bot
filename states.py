@@ -1,16 +1,9 @@
-from aiogram.fsm.state import State, StatesGroup
-
-class TreeForm(StatesGroup):
-    tree_type = State()
-    location = State()
-    photo = State()
-
-class PaymentForm(StatesGroup):
-    details = State()
-
-# MANA BU QISMNI QO'SHING:
+from aiogram.fsm.state import StatesGroup, State
 
 class UserRegister(StatesGroup):
     name = State()
-    phone = State() # SHU QATOR QOLIB KETGAN EDI
+    phone = State() # Shu yerda telefon so'rash xatosi tuzatildi
 
+class TreePlanting(StatesGroup):
+    photo = State()
+    location = State()
