@@ -34,21 +34,28 @@ async def save_user(message: types.Message, state: FSMContext):
     user_id = message.from_user.id
     user_name = message.text
 
+    # BACKEND_URL oxirida slash bor-yo'qligini tekshirib, xavfsiz URL yaratamiz
+    clean_url = BACKEND_URL.rstrip('/') # Oxiridagi slashni olib tashlaymiz
+    final_url = f"{clean_url}/users/"   # Backend kutayotgan aniq manzil
+
     async with aiohttp.ClientSession() as session:
-        # DIQQAT: /users emas, /users/ bo'lishi shart!
-        async with session.post(f"{BACKEND_URL}/users/", json={
-            "user_id": user_id,
-            "user_name": user_name
-        }) as resp:
-            
-            if resp.status in [200, 201]: # Agar backend muvaffaqiyatli saqlasa
-                await message.answer("✅ Rahmat! Ma'lumotlaringiz muvaffaqiyatli saqlandi.", reply_markup=main_menu())
-                await state.clear()
-            else:
-                # Agar xato bo'lsa, foydalanuvchiga bildiramiz
-                error_data = await resp.text()
-                print(f"Backend xatosi: {error_data}")
-                await message.answer("❌ Xatolik yuz berdi. Iltimos, birozdan so'ng qayta urinib ko'ring.")
+        try:
+            async with session.post(final_url, json={
+                "user_id": user_id,
+                "user_name": user_name
+            }, timeout=10) as resp:
+                
+                if resp.status in [200, 201]:
+                    await message.answer("✅ Rahmat! Ma'lumotlaringiz saqlandi.", reply_markup=main_menu())
+                    await state.clear()
+                else:
+                    # Backend qaytargan xatoni logga chiqaramiz
+                    error_text = await resp.text()
+                    print(f"Backend Error ({resp.status}): {error_text}")
+                    await message.answer(f"❌ Xatolik (Status: {resp.status}). Iltimos, keyinroq urinib ko'ring.")
+        except Exception as e:
+            print(f"Ulanishda xato: {e}")
+            await message.answer("❌ Backend bilan aloqa yo'q.")
 
 
 
@@ -248,6 +255,7 @@ async def save_payment_details(message: types.Message, state: FSMContext):
             pass
     await message.answer("✅ Ma'lumotlaringiz saqlandi va adminga yuborildi!", reply_markup=main_menu())
     await state.clear()
+
 
 
 
