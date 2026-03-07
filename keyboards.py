@@ -1,58 +1,23 @@
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
+from aiogram.types import KeyboardButton, InlineKeyboardButton
 
-
-def start_keyboard():
-
-    kb = ReplyKeyboardMarkup(resize_keyboard=True)
-
-    kb.add(KeyboardButton("🌳 Daraxt yuborish"))
-
-    return kb
-
+def main_menu():
+    builder = ReplyKeyboardBuilder()
+    builder.row(KeyboardButton(text="🌳 Daraxt yuborish"))
+    builder.row(KeyboardButton(text="👤 Shaxsiy kabinet"), KeyboardButton(text="📖 Qo'llanma"))
+    return builder.as_markup(resize_keyboard=True)
 
 def location_keyboard():
-
-    kb = ReplyKeyboardMarkup(resize_keyboard=True)
-
-    kb.add(KeyboardButton("📍 Lokatsiya yuborish", request_location=True))
-
-    return kb
-
-
-def phone_keyboard():
-
-    kb = ReplyKeyboardMarkup(resize_keyboard=True)
-
-    kb.add(KeyboardButton("📱 Telefon yuborish", request_contact=True))
-
-    return kb
-
-
-def photo_keyboard():
-
-    kb = ReplyKeyboardMarkup(resize_keyboard=True)
-
-    kb.add(KeyboardButton("📷 Rasm yuborish"))
-
-    return kb
-
+    builder = ReplyKeyboardBuilder()
+    builder.row(KeyboardButton(text="📍 Lokatsiya yuborish", request_location=True))
+    return builder.as_markup(resize_keyboard=True)
 
 def admin_keyboard(user_id):
-
-    kb = InlineKeyboardMarkup()
-
-    kb.add(
-        InlineKeyboardButton("✔ Qabul qilish", callback_data=f"accept_{user_id}"),
-        InlineKeyboardButton("❌ Rad etish", callback_data=f"reject_{user_id}")
-    )
-
-    return kb
-
+    builder = InlineKeyboardBuilder()
+    builder.row(InlineKeyboardButton(text="✅ Qabul qilish", callback_data=f"accept_{user_id}"))
+    return builder.as_markup()
 
 def payment_keyboard():
-
-    kb = ReplyKeyboardMarkup(resize_keyboard=True)
-
-    kb.add("💳 Karta", "📱 Telefon raqam")
-
-    return kb
+    builder = ReplyKeyboardBuilder()
+    builder.row(KeyboardButton(text="💳 Karta"), KeyboardButton(text="📱 Telefon raqam"))
+    return builder.as_markup(resize_keyboard=True)
