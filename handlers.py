@@ -70,11 +70,11 @@ async def get_photo(message: types.Message, state: FSMContext):
     await message.answer("Lokatsiyani yuboring:", reply_markup=kb)
     await state.set_state(TreePlanting.location)
 
+
+
 @router.message(TreePlanting.location, F.location)
 async def save_tree(message: types.Message, state: FSMContext):
-    # 1. Eng muhim qator: holatdagi ma'lumotlarni o'qib olish
-    data = await state.get_data() 
-    
+    data = await state.get_data()
     user_id = message.from_user.id
     
     async with aiohttp.ClientSession() as session:
@@ -86,7 +86,7 @@ async def save_tree(message: types.Message, state: FSMContext):
                     "user_id": user_id,
                     "user_name": user_info.get("full_name"),
                     "phone": user_info.get("phone"),
-                    "tree_type": data.get("name"), # Endi 'data' aniq bor
+                    "tree_type": data.get("name"),
                     "latitude": message.location.latitude,
                     "longitude": message.location.longitude,
                     "photo": data.get("photo")
@@ -94,27 +94,44 @@ async def save_tree(message: types.Message, state: FSMContext):
                 
                 async with session.post(f"{BACKEND_URL}/trees/", json=payload) as tree_resp:
                     if tree_resp.status in [200, 201]:
-                        # Admin ID raqamini to'g'ri qo'ying
-                        admin_id = "5833828220" 
+                        # --- ADMIN UCHUN TUGMALAR QISMI BOSHLANDI ---
+                        admin_id = "5833828220" # O'zingizning IDingiz
+                        t_id = "1" # Kelajakda bu bazadan keladigan haqiqiy ID bo'ladi
+                        
                         kb = types.InlineKeyboardMarkup(inline_keyboard=[
-                            [types.InlineKeyboardButton(text="✅ Tasdiqlash", callback_data="approve_tree")]
+                            [
+                                types.InlineKeyboardButton(text="✅ Tasdiqlash", callback_data=f"tree_approve_{t_id}"),
+                                types.InlineKeyboardButton(text="❌ Rad etish", callback_data=f"tree_reject_{t_id}")
+                            ]
                         ])
                         
-                        # Rasmni adminga yuborish
                         await message.bot.send_photo(
                             chat_id=admin_id, 
                             photo=data.get("photo"), 
                             caption=f"Yangi daraxt: {data.get('name')}\nEkuvchi: {user_info.get('full_name')}",
                             reply_markup=kb
                         )
+                        # --- ADMIN UCHUN TUGMALAR QISMI TUGADI ---
                         
                         await message.answer("✅ Daraxt yuborildi. Admin tasdiqlashini kuting!", reply_markup=main_menu())
                         await state.clear()
                     else:
                         await message.answer("❌ Serverda xatolik yuz berdi.")
             else:
-                await message.answer("Siz ro'yxatdan o'tmagansiz. /start ni bosing.")
+                await message.answer("Siz ro'yxatdan o'tmadingiz. /start ni bosing.")
 
+# Tugmalarni bosilganda ishlaydigan qism
+@router.callback_query(F.data.startswith("tree_"))
+async def handle_tree_action(callback: types.CallbackQuery):
+    action, tree_id = callback.data.split("_")[1], callback.data.split("_")[2]
+    
+    if action == "approve":
+        # Shu yerda Backendga statusni 'approved' deb yuboramiz
+        await callback.message.edit_caption(caption="✅ Daraxt tasdiqlandi va bazaga qo'shildi!")
+    elif action == "reject":
+        await callback.message.edit_caption(caption="❌ Daraxt rad etildi.")
+    
+    await callback.answer()
 
 
 
