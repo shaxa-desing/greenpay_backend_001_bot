@@ -1,5 +1,4 @@
-from aiogram.dispatcher.filters.state import State, StatesGroup
-
+from aiogram.fsm.state import State, StatesGroup
 
 class TreeForm(StatesGroup):
     tree_type = State()
@@ -11,4 +10,5 @@ class TreeForm(StatesGroup):
 class PaymentForm(StatesGroup):
     method = State()
     card = State()
+
     phone = State()
