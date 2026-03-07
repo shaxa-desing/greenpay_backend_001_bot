@@ -137,6 +137,18 @@ async def approve_tree(callback: types.CallbackQuery):
     # Bu yerda backendga statusni 'approved' deb yuboramiz
     await callback.message.edit_caption(caption="✅ Daraxt tasdiqlandi!")
 
+@router.message(Command("help"))
+async def help_cmd(message: types.Message):
+    text = """
+    📘 **Qo'llanma:**
+    1. **/start** - Ro'yxatdan o'tish.
+    2. **🌳 Daraxt ekish** - Daraxt nomi, rasm va lokatsiyani yuboring.
+    3. **👤 Shaxsiy kabinet** - Ma'lumotlaringizni ko'rish.
+    
+    *Daraxtingiz admin tomonidan tasdiqlangach, xaritada ko'rinadi!*
+    """
+    await message.answer(text, parse_mode="Markdown")
+
 
 
 
