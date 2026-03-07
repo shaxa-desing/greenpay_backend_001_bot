@@ -9,5 +9,8 @@ class PaymentForm(StatesGroup):
     details = State()
 
 # MANA BU QISMNI QO'SHING:
+
 class UserRegister(StatesGroup):
     name = State()
+    phone = State() # SHU QATOR QOLIB KETGAN EDI
+
