@@ -1,6 +1,12 @@
 from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
 from aiogram.types import KeyboardButton, InlineKeyboardButton
 
+def contact_keyboard():
+    return ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(text="📱 Telefon raqamni yuborish", request_contact=True)]],
+        resize_keyboard=True, one_time_keyboard=True
+    )
+
 def main_menu():
     builder = ReplyKeyboardBuilder()
     builder.row(KeyboardButton(text="🌳 Daraxt yuborish"))
@@ -28,4 +34,5 @@ def payment_keyboard():
     builder = ReplyKeyboardBuilder()
     builder.row(KeyboardButton(text="💳 Karta"), KeyboardButton(text="📱 Telefon raqam"))
     return builder.as_markup(resize_keyboard=True)
+
 
