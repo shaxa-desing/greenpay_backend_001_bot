@@ -15,18 +15,17 @@ router = Router()
 # State uchun: class UserRegister(StatesGroup): name = State()
 
 @router.message(Command("start"))
-async def cmd_start(message: types.Message, state: FSMContext):
+async def start_cmd(message: types.Message, state: FSMContext):
     user_id = message.from_user.id
     
-    # Bazadan foydalanuvchini tekshiramiz
+    # 1. Avval foydalanuvchi bazada bormi tekshiramiz
     async with aiohttp.ClientSession() as session:
         async with session.get(f"{BACKEND_URL}/user/{user_id}") as resp:
             if resp.status == 200:
-                # Foydalanuvchi allaqachon mavjud
-                await message.answer("Assalomu aleykum! Xush kelibsiz.", reply_markup=main_menu())
+                await message.answer("Siz allaqachon ro'yxatdan o'tgansiz!", reply_markup=main_menu())
             else:
-                # Yangi foydalanuvchi
-                await message.answer("Assalomu aleykum! Marhamat, ismingiz va familiyangizni kiriting:")
+                # 2. Agar yo'q bo'lsa, ro'yxatdan o'tishni boshlaymiz
+                await message.answer("Xush kelibsiz! Iltimos, ism-familiyangizni kiriting:")
                 await state.set_state(UserRegister.name)
 
 
@@ -266,6 +265,7 @@ async def save_payment_details(message: types.Message, state: FSMContext):
             pass
     await message.answer("✅ Ma'lumotlaringiz saqlandi va adminga yuborildi!", reply_markup=main_menu())
     await state.clear()
+
 
 
 
