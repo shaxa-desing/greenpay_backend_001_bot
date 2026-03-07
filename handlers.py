@@ -63,6 +63,20 @@ async def show_profile(message: types.Message):
             else:
                 await message.answer("⚠️ Ma'lumot topilmadi. /start ni bosing.")
 
+# TreePlanting ga qo'shing
+class TreePlanting(StatesGroup):
+    name = State()
+    photo = State()
+    location = State()
+
+# Daraxt ekish boshlanganda
+@router.message(F.text == "🌳 Daraxt ekish")
+async def ask_tree_name(message: types.Message, state: FSMContext):
+    await message.answer("Daraxtga nom bering (masalan: 'Vatan bog'i'):")
+    await state.set_state(TreePlanting.name)
+
+# ... keyin nomni saqlab, rasm so'raymiz
+
 @router.message(F.text == "🌳 Daraxt ekish")
 async def ask_tree_photo(message: types.Message, state: FSMContext):
     await message.answer("Daraxtingizning rasmini yuboring:", reply_markup=types.ReplyKeyboardRemove())
@@ -107,4 +121,5 @@ async def save_tree(message: types.Message, state: FSMContext):
                         await message.answer("❌ Xatolik yuz berdi.")
             else:
                 await message.answer("Siz ro'yxatdan o'tmagansiz. /start ni bosing.")
+
 
