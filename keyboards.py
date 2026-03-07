@@ -12,12 +12,20 @@ def location_keyboard():
     builder.row(KeyboardButton(text="📍 Lokatsiya yuborish", request_location=True))
     return builder.as_markup(resize_keyboard=True)
 
-def admin_keyboard(user_id):
-    builder = InlineKeyboardBuilder()
-    builder.row(InlineKeyboardButton(text="✅ Qabul qilish", callback_data=f"accept_{user_id}"))
-    return builder.as_markup()
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+
+def admin_keyboard(user_id: int):
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text="✅ Qabul qilish", callback_data=f"accept_{user_id}"),
+                InlineKeyboardButton(text="❌ Rad etish", callback_data=f"reject_{user_id}")
+            ]
+        ]
+    )
 
 def payment_keyboard():
     builder = ReplyKeyboardBuilder()
     builder.row(KeyboardButton(text="💳 Karta"), KeyboardButton(text="📱 Telefon raqam"))
     return builder.as_markup(resize_keyboard=True)
+
