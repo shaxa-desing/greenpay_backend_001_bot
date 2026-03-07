@@ -111,19 +111,21 @@ async def get_photo(message: types.Message, state: FSMContext):
 # --- ADMIN TASDIQLASHI VA AVTOMATIK TO'LOV ---
 @router.callback_query(F.data.startswith("accept_"))
 async def admin_accept(call: types.CallbackQuery):
+    # 1. ENG BIRINCHI navbatda shu qatorni qo'ying!
+    await call.answer("Tasdiqlandi")
+    
     user_id = int(call.data.split("_")[1])
     
+    # 2. Keyin qolgan jarayonlarni bajaring
     async with aiohttp.ClientSession() as session:
         try:
             async with session.get(f"{BACKEND_URL}/user/{user_id}") as resp:
                 user_data = await resp.json() if resp.status == 200 else {}
                 
-                # Agar karta yoki telefon avval saqlangan bo'lsa
                 if user_data.get('card') or user_data.get('phone_pay'):
                     card = user_data.get('card', "Mavjud emas")
                     phone = user_data.get('phone_pay', "Mavjud emas")
                     
-                    # Adminga ma'lumotlarni yuborish
                     await call.bot.send_message(
                         ADMIN_ID, 
                         f"💰 **To'lov ma'lumotlari (Avtomatik):**\n\n👤 ID: {user_id}\n💳 Karta: `{card}`\n📱 Raqam: `{phone}`",
@@ -131,12 +133,12 @@ async def admin_accept(call: types.CallbackQuery):
                     )
                     await call.bot.send_message(user_id, "✅ Daraxtingiz tasdiqlandi! To'lov ma'lumotlaringiz adminga yuborildi.", reply_markup=main_menu())
                 else:
-                    # Agar birinchi marta bo'lsa
                     await call.bot.send_message(user_id, "✅ Daraxtingiz tasdiqlandi! To'lov ma'lumotlarini kiriting:", reply_markup=payment_keyboard())
-        except:
+        except Exception as e:
+            # Xatolikni logga chiqarish ham foydali
+            print(f"Error in admin_accept: {e}")
             await call.bot.send_message(user_id, "✅ Tasdiqlandi, lekin to'lov ma'lumotlarini olishda xato yuz berdi.")
-    
-    await call.answer("Tasdiqlandi")
+
 
 # --- TO'LOV MA'LUMOTLARINI SAQLASH ---
 @router.message(F.text.in_(["💳 Karta", "📱 Telefon raqam"]))
@@ -179,3 +181,4 @@ async def save_payment_details(message: types.Message, state: FSMContext):
 #     video_id = message.video.file_id
 #     # Markdown o'rniga oddiy matn qilib yuboramiz
 #     await message.answer(f"Sizning video file_id:\n\n{video_id}")
+
