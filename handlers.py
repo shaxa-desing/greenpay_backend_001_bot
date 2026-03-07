@@ -70,17 +70,38 @@ async def get_photo(message: types.Message, state: FSMContext):
     await state.set_state(TreePlanting.location)
 
 @router.message(TreePlanting.location, F.location)
-async def save_tree(message: types.Message, state: FSMContext):
+async def save_tree(message: types.Message, state: FSMContext, bot: types.Bot): # bot ni qo'shib qo'ying
     data = await state.get_data()
-    payload = {
-        "user_id": message.from_user.id,
-        "user_name": "Foydalanuvchi", # Bu qismni yanada yaxshilash mumkin
-        "tree_type": data['name'],
-        "latitude": message.location.latitude,
-        "longitude": message.location.longitude,
-        "photo": data['photo']
-    }
+    user_id = message.from_user.id
+    
     async with aiohttp.ClientSession() as session:
-        await session.post(f"{BACKEND_URL}/trees/", json=payload)
-    await message.answer("✅ Daraxt yuborildi. Admin tasdiqlashini kuting!")
-    await state.clear()
+        async with session.get(f"{BACKEND_URL}/user/{user_id}") as resp:
+            if resp.status == 200:
+                user_info = await resp.json()
+                
+                payload = {
+                    "user_id": user_id,
+                    "user_name": user_info.get("full_name"), # ism
+                    "phone": user_info.get("phone"),
+                    "tree_type": data.get("name"),
+                    "latitude": message.location.latitude,
+                    "longitude": message.location.longitude,
+                    "photo": data.get("photo")
+                }
+                
+                async with session.post(f"{BACKEND_URL}/trees/", json=payload) as tree_resp:
+                    if tree_resp.status in [200, 201]:
+                        # Admin uchun xabar yuborish
+                        admin_id = "5833828220" # Sizning ID
+                        kb = types.InlineKeyboardMarkup(inline_keyboard=[
+                            [types.InlineKeyboardButton(text="✅ Tasdiqlash", callback_data="approve_tree")]
+                        ])
+                        await bot.send_photo(
+                            admin_id, 
+                            photo=data.get("photo"), 
+                            caption=f"Yangi daraxt: {data.get('name')}\nEkuvchi: {user_info.get('full_name')}",
+                            reply_markup=kb
+                        )
+                        await message.answer("✅ Daraxt yuborildi. Admin tasdiqlashini kuting!")
+                        await state.clear()
+
