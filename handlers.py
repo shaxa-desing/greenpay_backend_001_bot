@@ -107,11 +107,18 @@ async def get_photo(message: types.Message, state: FSMContext):
     await message.answer("✅ Rahmat! Ma'lumotlar adminga yuborildi va bazaga saqlandi. Tasdiqlashni kuting.", reply_markup=main_menu())
     await state.clear()
 
-# --- ADMIN TASDIQLASHI VA AVTOMATIK TO'LOV ---
+# --- ADMIN TASDIQLASHI ---
 @router.callback_query(F.data.startswith("accept_"))
 async def admin_accept(call: types.CallbackQuery):
     await call.answer("Tasdiqlandi")
     user_id = int(call.data.split("_")[1])
+    
+    # Admindagi xabarni o'zgartirib qo'yamiz (Tugmalarni olib tashlaymiz)
+    await call.message.edit_caption(
+        caption=f"{call.message.caption}\n\n✅ **QABUL QILINDI**",
+        reply_markup=None
+    )
+
     async with aiohttp.ClientSession() as session:
         try:
             async with session.get(f"{BACKEND_URL}/user/{user_id}") as resp:
@@ -131,6 +138,32 @@ async def admin_accept(call: types.CallbackQuery):
             print(f"Error in admin_accept: {e}")
             await call.bot.send_message(user_id, "✅ Tasdiqlandi, lekin to'lov ma'lumotlarini olishda xato yuz berdi.")
 
+# --- ADMIN RAD ETISHI ---
+@router.callback_query(F.data.startswith("reject_"))
+async def admin_reject(call: types.CallbackQuery):
+    await call.answer("Rad etildi")
+    user_id = int(call.data.split("_")[1])
+    
+    # Admindagi xabarni o'zgartirib qo'yamiz (Tugmalarni olib tashlaymiz)
+    await call.message.edit_caption(
+        caption=f"{call.message.caption}\n\n❌ **RAD ETILDI**",
+        reply_markup=None
+    )
+
+    # Foydalanuvchiga rad etilgani haqida xabar yuboramiz
+    reject_text = (
+        "❌ **Kechirasiz, siz yuborgan daraxt ma'lumotlari admin tomonidan rad etildi.**\n\n"
+        "Sabablar quyidagilardan biri bo'lishi mumkin:\n"
+        "• Rasm sifatsiz yoki noaniq.\n"
+        "• Lokatsiya xato yuborilgan.\n"
+        "• Daraxt turi noto'g'ri kiritilgan.\n\n"
+        "Iltimos, ma'lumotlarni tekshirib qaytadan yuboring."
+    )
+    
+    try:
+        await call.bot.send_message(user_id, reject_text, parse_mode="Markdown", reply_markup=main_menu())
+    except Exception as e:
+        print(f"Xabar yuborishda xatolik (Rad etish): {e}")
 # --- TO'LOV MA'LUMOTLARINI SAQLASH ---
 @router.message(F.text.in_(["💳 Karta", "📱 Telefon raqam"]))
 async def start_payment_save(message: types.Message, state: FSMContext):
@@ -160,3 +193,4 @@ async def save_payment_details(message: types.Message, state: FSMContext):
             pass
     await message.answer("✅ Ma'lumotlaringiz saqlandi va adminga yuborildi!", reply_markup=main_menu())
     await state.clear()
+
