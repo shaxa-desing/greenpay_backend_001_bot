@@ -71,8 +71,7 @@ async def get_photo(message: types.Message, state: FSMContext):
     await state.set_state(TreePlanting.location)
 
 @router.message(TreePlanting.location, F.location)
-async def save_tree(message: types.Message, state: FSMContext, bot: types.Bot): # bot ni qo'shib qo'ying
-    data = await state.get_data()
+async def save_tree(message: types.Message, state: FSMContext, bot: Bot): # types.Bot emas, shunchaki Bot
     user_id = message.from_user.id
     
     async with aiohttp.ClientSession() as session:
@@ -105,5 +104,6 @@ async def save_tree(message: types.Message, state: FSMContext, bot: types.Bot): 
                         )
                         await message.answer("✅ Daraxt yuborildi. Admin tasdiqlashini kuting!")
                         await state.clear()
+
 
 
