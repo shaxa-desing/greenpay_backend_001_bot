@@ -94,14 +94,17 @@ async def save_tree(message: types.Message, state: FSMContext):
                         await message.answer("❌ Saqlashda xatolik.")
             
 
-ADMIN_ID = "5833828220 " # O'z telegram IDingizni yozing
+# handlers.py ga qo'shing:
+ADMIN_ID = "5833828220" # O'zingizning IDingizni yozing
 
-async def send_to_admin(tree_id, user_name, tree_name, photo, bot):
-    kb = types.InlineKeyboardMarkup(inline_keyboard=[
-        [types.InlineKeyboardButton(text="✅ Tasdiqlash", callback_data=f"approve_{tree_id}")],
-        [types.InlineKeyboardButton(text="❌ Rad etish", callback_data=f"reject_{tree_id}")]
-    ])
-    await bot.send_photo(ADMIN_ID, photo=photo, caption=f"Yangi daraxt: {tree_name}\nEkuvchi: {user_name}", reply_markup=kb)
+@router.callback_query(F.data.startswith("approve_"))
+async def approve_tree(callback: types.CallbackQuery):
+    tree_id = callback.data.split("_")[1]
+    # Backendga statusni 'approved' deb yuborish kerak
+    await callback.message.edit_caption(caption="✅ Daraxt tasdiqlandi va xaritaga qo'shildi!")
+    await callback.answer("Daraxt tasdiqlandi")
+
+
 
 # Callback uchun handler
 @router.callback_query(F.data.startswith("approve_"))
@@ -120,6 +123,7 @@ async def help_cmd(message: types.Message):
     *Daraxtingiz admin tomonidan tasdiqlangach, xaritada ko'rinadi!*
     """
     await message.answer(text, parse_mode="Markdown")
+
 
 
 
