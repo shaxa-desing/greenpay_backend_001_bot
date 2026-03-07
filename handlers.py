@@ -52,21 +52,25 @@ async def save_user(message: types.Message, state: FSMContext):
 
 
 
-@router.message(Command("start"))
-async def cmd_start(message: types.Message, state: FSMContext):
-    await state.clear()
-    await message.answer("GreenPay botiga xush kelibsiz!", reply_markup=main_menu())
-
 @router.message(F.text == "👤 Shaxsiy kabinet")
 async def show_profile(message: types.Message):
     async with aiohttp.ClientSession() as session:
+        # Bu yerda /user/{id} slashsiz bo'lishi mumkin, 
+        # lekin backenddagi kodingiz bilan bir xilligini tekshiring
         async with session.get(f"{BACKEND_URL}/user/{message.from_user.id}") as resp:
             if resp.status == 200:
                 user = await resp.json()
-                # Shu yerga "Tahrirlash" tugmalari bo'lgan inline keyboard qo'shing
-                await message.answer(f"👤 Kabinet:\nIsm: {user['user_name']}\n💳 Karta: {user.get('card') or 'Yoq'}\n📱 Tel: {user.get('phone_pay') or 'Yoq'}")
+                text = (
+                    f"👤 **Sizning profilingiz:**\n\n"
+                    f"🆔 ID: `{user['user_id']}`\n"
+                    f"👤 Ism: {user['full_name']}\n"
+                    f"💳 Karta: {user.get('card') or 'Kiritilmagan'}\n"
+                    f"📱 Tel: {user.get('phone_pay') or 'Kiritilmagan'}"
+                )
+                await message.answer(text, parse_mode="Markdown")
             else:
-                await message.answer("Siz ro'yxatdan o'tmagansiz.")
+                await message.answer("⚠️ Siz hali ro'yxatdan o'tmagansiz. Iltimos, /start bosing.")
+
 
 # --- QO'LLANMA ---
 @router.message(F.text == "📖 Qo'llanma")
@@ -244,6 +248,7 @@ async def save_payment_details(message: types.Message, state: FSMContext):
             pass
     await message.answer("✅ Ma'lumotlaringiz saqlandi va adminga yuborildi!", reply_markup=main_menu())
     await state.clear()
+
 
 
 
