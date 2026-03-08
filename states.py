@@ -9,3 +9,6 @@ class TreePlanting(StatesGroup):
     photo = State()
     location = State()
 
+class CardUpdate(StatesGroup):
+    card_number = State()
+    phone_number = State()
