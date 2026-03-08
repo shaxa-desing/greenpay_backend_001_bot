@@ -134,4 +134,45 @@ async def handle_tree_action(callback: types.CallbackQuery):
     await callback.answer()
 
 
+# Karta kiritishni boshlash
+@router.message(F.text == "💳 Karta ma'lumotlari")
+async def start_card_update(message: types.Message, state: FSMContext):
+    await message.answer("Iltimos, 16 xonali karta raqamingizni kiriting:")
+    await state.set_state(CardUpdate.card_number)
+
+# Karta raqamini qabul qilish
+@router.message(CardUpdate.card_number)
+async def process_card(message: types.Message, state: FSMContext):
+    card = message.text.replace(" ", "") # Bo'shliqlarni olib tashlash
+    if len(card) == 16 and card.isdigit():
+        await state.update_data(card_number=card)
+        await message.answer("Endi kartaga ulangan telefon raqamingizni yuboring:", 
+                             reply_markup=contact_keyboard())
+        await state.set_state(CardUpdate.phone_number)
+    else:
+        await message.answer("Xato! Karta raqami 16 ta raqamdan iborat bo'lishi kerak. Qaytadan urinib ko'ring:")
+
+# Telefonni qabul qilib backendga yuborish
+@router.message(CardUpdate.phone_number, F.contact)
+async def process_card_phone(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    user_id = message.from_user.id
+    
+    payload = {
+        "card": data['card_number'],
+        "phone": message.contact.phone_number
+    }
+    
+    async with aiohttp.ClientSession() as session:
+        # Backendda kartani yangilash uchun PUT yoki POST so'rovi
+        async with session.post(f"{BACKEND_URL}/update-card/{user_id}", json=payload) as resp:
+            if resp.status == 200:
+                await message.answer("✅ Karta ma'lumotlaringiz muvaffaqiyatli saqlandi!", 
+                                     reply_markup=main_menu())
+                await state.clear()
+            else:
+                await message.answer("❌ Xatolik yuz berdi. Keyinroq urinib ko'ring.")
+
+
+
 
