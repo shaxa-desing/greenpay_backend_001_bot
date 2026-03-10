@@ -225,7 +225,7 @@ async def finalize_card_save(message: types.Message, state: FSMContext):
 
 
 
-HF_TOKEN = "SIZ_OLGAN_TOKEN"
+HF_TOKEN = "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"
 API_URL = "https://api-inference.huggingface.co/models/google/vit-base-patch16-224"
 
 @router.message(TreePlanting.photo, F.photo)
@@ -262,6 +262,7 @@ async def check_tree_ai(message: types.Message, state: FSMContext):
             await msg.edit_text("⚠️ Tekshirishda xatolik. Hozircha rasmni qabul qildim, davom etishingiz mumkin.")
             await state.update_data(photo=photo.file_id)
             await state.set_state(TreePlanting.location)
+
 
 
 
