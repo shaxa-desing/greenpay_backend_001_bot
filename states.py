@@ -9,6 +9,7 @@ class TreePlanting(StatesGroup):
     photo = State()
     location = State()
 
+# MANA BU QISMNI QO'SHING
 class CardUpdate(StatesGroup):
     card_number = State()
     phone_number = State()
