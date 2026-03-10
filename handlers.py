@@ -101,27 +101,38 @@ async def save_tree(message: types.Message, state: FSMContext):
                         admin_id = "5833828220" # O'zingizning IDingiz
                         t_id = "1" # Kelajakda bu bazadan keladigan haqiqiy ID bo'ladi
                         
-                        kb = types.InlineKeyboardMarkup(inline_keyboard=[
-                            [
-                                types.InlineKeyboardButton(text="✅ Tasdiqlash", callback_data=f"tree_approve_{t_id}"),
-                                types.InlineKeyboardButton(text="❌ Rad etish", callback_data=f"tree_reject_{t_id}")
-                            ]
-                        ])
-                        
-                        await message.bot.send_photo(
-                            chat_id=admin_id, 
-                            photo=data.get("photo"), 
-                            caption=f"Yangi daraxt: {data.get('name')}\nEkuvchi: {user_info.get('full_name')}",
-                            reply_markup=kb
-                        )
-                        # --- ADMIN UCHUN TUGMALAR QISMI TUGADI ---
-                        
-                        await message.answer("✅ Daraxt yuborildi. Admin tasdiqlashini kuting!", reply_markup=main_menu())
-                        await state.clear()
-                    else:
-                        await message.answer("❌ Serverda xatolik yuz berdi.")
-            else:
-                await message.answer("Siz ro'yxatdan o'tmadingiz. /start ni bosing.")
+                        # save_tree ichida tugma yaratish qismi
+# user_id ni callback_data ga qo'shamiz
+kb = types.InlineKeyboardMarkup(inline_keyboard=[
+    [
+        types.InlineKeyboardButton(text="✅ Tasdiqlash", callback_data=f"tree_approve_{user_id}"),
+        types.InlineKeyboardButton(text="❌ Rad etish", callback_data=f"tree_reject_{user_id}")
+    ]
+])
+
+# handle_tree_action funksiyasi (Admin tugmani bosganda)
+@router.callback_query(F.data.startswith("tree_"))
+async def handle_tree_action(callback: types.CallbackQuery):
+    parts = callback.data.split("_")
+    action = parts[1]
+    target_user_id = parts[2] # Daraxt ekkan odamning ID si
+    
+    if action == "approve":
+        # Foydalanuvchiga xabar yuborish
+        try:
+            await callback.bot.send_message(
+                chat_id=target_user_id, 
+                text="🌟 Tabriklaymiz! Siz yuborgan daraxt admin tomonidan tasdiqlandi va xaritaga qo'shildi."
+            )
+            await callback.message.edit_caption(caption="✅ Daraxt tasdiqlandi. Foydalanuvchiga xabar yuborildi.")
+        except Exception as e:
+            await callback.answer("Xabar yuborishda xatolik!")
+            
+    elif action == "reject":
+        await callback.bot.send_message(chat_id=target_user_id, text="❌ Afsuski, siz yuborgan daraxt rad etildi.")
+        await callback.message.edit_caption(caption="❌ Daraxt rad etildi.")
+    
+    await callback.answer()
 
 # Tugmalarni bosilganda ishlaydigan qism
 @router.callback_query(F.data.startswith("tree_"))
@@ -236,6 +247,7 @@ async def check_tree_ai(message: types.Message, state: FSMContext):
                 await state.set_state(TreePlanting.location)
             else:
                 await message.answer("❌ Bu rasmda daraxt ko'rinmayapti. Iltimos, haqiqiy daraxt rasmiga tushiring.")
+
 
 
 
