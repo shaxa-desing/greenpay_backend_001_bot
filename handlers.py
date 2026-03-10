@@ -142,6 +142,32 @@ async def start_card_update(message: types.Message, state: FSMContext):
     await message.answer("Iltimos, 16 xonali karta raqamingizni kiriting:")
     await state.set_state(CardUpdate.card_number)
 
+@router.message(F.text == "💳 Karta ma'lumotlari")
+async def show_card_info(message: types.Message, state: FSMContext):
+    user_id = message.from_user.id
+    async with aiohttp.ClientSession() as session:
+        async with session.get(f"{BACKEND_URL}/user/{user_id}") as resp:
+            if resp.status == 200:
+                user_data = await resp.json()
+                if user_data.get("card"):
+                    text = f"Sizning ulangan kartangiz: `{user_data['card']}`\n\nYangilashni xohlaysizmi?"
+                    kb = types.InlineKeyboardMarkup(inline_keyboard=[
+                        [types.InlineKeyboardButton(text="🔄 Yangilash", callback_data="update_card_start")]
+                    ])
+                    await message.answer(text, reply_markup=kb, parse_mode="Markdown")
+                else:
+                    await message.answer("Sizda karta ulanmagan. Karta raqamingizni kiriting (16 xonali):")
+                    await state.set_state(CardUpdate.card_number)
+            else:
+                await message.answer("Avval /start orqali ro'yxatdan o'ting.")
+
+# Inline tugma bosilganda yangilashni boshlash
+@router.callback_query(F.data == "update_card_start")
+async def update_card_callback(callback: types.CallbackQuery, state: FSMContext):
+    await callback.message.answer("Yangi karta raqamingizni kiriting:")
+    await state.set_state(CardUpdate.card_number)
+    await callback.answer()
+
 # Karta raqamini qabul qilish
 @router.message(CardUpdate.card_number)
 async def process_card(message: types.Message, state: FSMContext):
@@ -211,6 +237,7 @@ async def check_tree_ai(message: types.Message, state: FSMContext):
                 await state.set_state(TreePlanting.location)
             else:
                 await message.answer("❌ Bu rasmda daraxt ko'rinmayapti. Iltimos, haqiqiy daraxt rasmiga tushiring.")
+
 
 
 
