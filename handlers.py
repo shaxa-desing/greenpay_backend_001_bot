@@ -47,11 +47,12 @@ async def get_phone(message: types.Message, state: FSMContext):
 async def profile(message: types.Message):
     async with aiohttp.ClientSession() as session:
         async with session.get(f"{BACKEND_URL}/user/{message.from_user.id}") as resp:
-            if resp.status == 200:
-                user = await resp.json()
-                await message.answer(f"👤 Ism: {user['full_name']}\n📱 Tel: {user['phone']}")
-            else:
-                await message.answer("❌ Profil topilmadi. /start ni bosing.")
+            user = await resp.json()
+            card_info = user.get('card') if user.get('card') else "Ulanmagan"
+            text = (f"👤 **Ism:** {user['full_name']}\n"
+                    f"📱 **Tel:** {user['phone']}\n"
+                    f"💳 **Karta:** `{card_info}`")
+            await message.answer(text, parse_mode="Markdown")
 
 # --- DARAXT EKISH VA ADMIN TASDIQLASH ---
 @router.message(F.text == "🌳 Daraxt ekish")
@@ -235,6 +236,7 @@ async def check_tree_ai(message: types.Message, state: FSMContext):
                 await state.set_state(TreePlanting.location)
             else:
                 await message.answer("❌ Bu rasmda daraxt ko'rinmayapti. Iltimos, haqiqiy daraxt rasmiga tushiring.")
+
 
 
 
