@@ -155,25 +155,39 @@ async def process_card(message: types.Message, state: FSMContext):
         await message.answer("Xato! Karta raqami 16 ta raqamdan iborat bo'lishi kerak. Qaytadan urinib ko'ring:")
 
 # Telefonni qabul qilib backendga yuborish
+# handlers.py
+
 @router.message(CardUpdate.phone_number, F.contact)
 async def process_card_phone(message: types.Message, state: FSMContext):
     data = await state.get_data()
     user_id = message.from_user.id
+    card_num = data.get('card_number')
+    phone_num = message.contact.phone_number
     
     payload = {
-        "card": data['card_number'],
-        "phone": message.contact.phone_number
+        "card": card_num,
+        "phone": phone_num
     }
     
     async with aiohttp.ClientSession() as session:
-        # Backendda kartani yangilash uchun PUT yoki POST so'rovi
+        # 1. Backendda saqlash
         async with session.post(f"{BACKEND_URL}/update-card/{user_id}", json=payload) as resp:
             if resp.status == 200:
-                await message.answer("✅ Karta ma'lumotlaringiz muvaffaqiyatli saqlandi!", 
-                                     reply_markup=main_menu())
+                # 2. Adminga yuborish (Sizga)
+                ADMIN_ID = "5833828220"
+                caption = (f"💳 **Yangi karta kiritildi!**\n\n"
+                           f"👤 Foydalanuvchi: {message.from_user.full_name}\n"
+                           f"🆔 ID: `{user_id}`\n"
+                           f"💳 Karta: `{card_num}`\n"
+                           f"📱 Tel: {phone_num}")
+                
+                await message.bot.send_message(ADMIN_ID, caption, parse_mode="Markdown")
+                
+                await message.answer("✅ Karta ma'lumotlari saqlandi va adminga yuborildi!", reply_markup=main_menu())
                 await state.clear()
             else:
-                await message.answer("❌ Xatolik yuz berdi. Keyinroq urinib ko'ring.")
+                await message.answer("❌ Backendda saqlashda xatolik yuz berdi.")
+
 
 
 
