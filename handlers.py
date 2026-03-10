@@ -225,11 +225,13 @@ async def finalize_card_save(message: types.Message, state: FSMContext):
 
 
 
-HF_TOKEN = "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"
+HF_TOKEN = "SIZ_OLGAN_TOKEN"
 API_URL = "https://api-inference.huggingface.co/models/google/vit-base-patch16-224"
 
 @router.message(TreePlanting.photo, F.photo)
 async def check_tree_ai(message: types.Message, state: FSMContext):
+    msg = await message.answer("🔍 Rasm tekshirilmoqda, iltimos kuting...")
+    
     photo = message.photo[-1]
     file = await message.bot.get_file(photo.file_id)
     photo_bytes = await message.bot.download_file(file.file_path)
@@ -237,16 +239,30 @@ async def check_tree_ai(message: types.Message, state: FSMContext):
     headers = {"Authorization": f"Bearer {HF_TOKEN}"}
     
     async with aiohttp.ClientSession() as session:
-        async with session.post(API_URL, headers=headers, data=photo_bytes) as resp:
-            result = await resp.json()
-            # AI natijasini tekshirish
-            labels = [str(r.get('label', '')).lower() for r in result]
-            if any(x in labels for x in ['tree', 'plant', 'forest', 'wood']):
-                await state.update_data(photo=photo.file_id)
-                await message.answer("✅ Daraxt aniqlandi! Endi lokatsiyani yuboring.")
-                await state.set_state(TreePlanting.location)
-            else:
-                await message.answer("❌ Bu rasmda daraxt ko'rinmayapti. Iltimos, haqiqiy daraxt rasmiga tushiring.")
+        try:
+            async with session.post(API_URL, headers=headers, data=photo_bytes) as resp:
+                result = await resp.json()
+                
+                # Model yuklanayotgan bo'lsa, qayta urinish kerakligini aytadi
+                if "error" in result:
+                    await msg.edit_text("⏳ Model yuklanmoqda, 5 soniyadan keyin qayta yuboring.")
+                    return
+
+                # AI bergan natijalardan 'tree', 'plant' so'zlarini qidiramiz
+                full_text = str(result).lower()
+                keywords = ['tree', 'plant', 'forest', 'wood', 'nature', 'leaf']
+                
+                if any(word in full_text for word in keywords):
+                    await state.update_data(photo=photo.file_id)
+                    await msg.edit_text("✅ Daraxt aniqlandi! Endi lokatsiyani yuboring.")
+                    await state.set_state(TreePlanting.location)
+                else:
+                    await msg.edit_text("❌ Bu rasmda daraxt aniqlanmadi. Iltimos, boshqa rasm yuboring.")
+        except Exception:
+            await msg.edit_text("⚠️ Tekshirishda xatolik. Hozircha rasmni qabul qildim, davom etishingiz mumkin.")
+            await state.update_data(photo=photo.file_id)
+            await state.set_state(TreePlanting.location)
+
 
 
 
