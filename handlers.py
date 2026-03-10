@@ -189,6 +189,31 @@ async def process_card_phone(message: types.Message, state: FSMContext):
                 await message.answer("❌ Backendda saqlashda xatolik yuz berdi.")
 
 
+HF_TOKEN = "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"
+API_URL = "https://api-inference.huggingface.co/models/google/vit-base-patch16-224"
+
+@router.message(TreePlanting.photo, F.photo)
+async def check_tree_ai(message: types.Message, state: FSMContext):
+    photo = message.photo[-1]
+    file = await message.bot.get_file(photo.file_id)
+    photo_bytes = await message.bot.download_file(file.file_path)
+
+    headers = {"Authorization": f"Bearer {HF_TOKEN}"}
+    
+    async with aiohttp.ClientSession() as session:
+        async with session.post(API_URL, headers=headers, data=photo_bytes) as resp:
+            result = await resp.json()
+            # AI natijasini tekshirish
+            labels = [str(r.get('label', '')).lower() for r in result]
+            if any(x in labels for x in ['tree', 'plant', 'forest', 'wood']):
+                await state.update_data(photo=photo.file_id)
+                await message.answer("✅ Daraxt aniqlandi! Endi lokatsiyani yuboring.")
+                await state.set_state(TreePlanting.location)
+            else:
+                await message.answer("❌ Bu rasmda daraxt ko'rinmayapti. Iltimos, haqiqiy daraxt rasmiga tushiring.")
+
+
+
 
 
 
