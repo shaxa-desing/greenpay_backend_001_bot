@@ -3,7 +3,7 @@ import logging
 from aiogram import Bot, Dispatcher
 from handlers import router
 
-BOT_TOKEN = "8565818987:AAEciIAbwHVGjkuJ7TwwdCfKjKlXYj8annI"
+BOT_TOKEN = "8565818987:AAFtp_uIUnZOdeqLRjWP2E_2eObcEFLJ28o"
 
 async def main():
     bot = Bot(token=BOT_TOKEN)
@@ -16,3 +16,4 @@ async def main():
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     asyncio.run(main())
+
