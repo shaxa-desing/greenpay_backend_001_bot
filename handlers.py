@@ -1,10 +1,12 @@
 import os
 import aiohttp
+# Faylning eng tepasidagi import qismi shunday bo'lsin:
 from aiogram import Router, F, types, Bot # <--- Bot ni shu yerga qo'shdik
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
-from states import UserRegister, TreePlanting
+# Faylning eng tepasidagi import qismi shunday bo'lsin:
+from states import UserRegister, TreePlanting, CardUpdate # CardUpdate qo'shildi
 from keyboards import main_menu, contact_keyboard
 
 router = Router()
@@ -172,6 +174,7 @@ async def process_card_phone(message: types.Message, state: FSMContext):
                 await state.clear()
             else:
                 await message.answer("❌ Xatolik yuz berdi. Keyinroq urinib ko'ring.")
+
 
 
 
