@@ -2,6 +2,7 @@ import os
 import aiohttp
 from aiogram import Router, F, types
 from aiogram.filters import Command
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.fsm.context import FSMContext
 from states import UserRegister, TreePlanting, CardUpdate
 from keyboards import main_menu, contact_keyboard
@@ -77,14 +78,18 @@ async def get_tree_name(message: types.Message, state: FSMContext):
 
 @router.message(TreePlanting.photo, F.photo)
 async def check_tree_ai(message: types.Message, state: FSMContext):
+    # 1. Kutib turish xabarini yuboramiz
     msg = await message.answer("🔍 AI rasmda nima borligini aniqlamoqda...")
+    
     photo = message.photo[-1]
     file = await message.bot.get_file(photo.file_id)
     photo_bytes = await message.bot.download_file(file.file_path)
 
+    # 2. ReplyKeyboardMarkup (pastki tugma)
     loc_kb = types.ReplyKeyboardMarkup(
         keyboard=[[types.KeyboardButton(text="📍 Joylashuvni yuborish", request_location=True)]], 
-        resize_keyboard=True
+        resize_keyboard=True,
+        one_time_keyboard=True # Tugma bosilgandan so'ng yo'qolishi uchun
     )
 
     headers = {"Authorization": f"Bearer {HF_TOKEN}"}
@@ -92,19 +97,25 @@ async def check_tree_ai(message: types.Message, state: FSMContext):
         try:
             async with session.post(API_URL, headers=headers, data=photo_bytes) as resp:
                 result = await resp.json()
-                # AI natijasini tekshirish
                 is_tree = any(item.get('label', '').lower() in ['tree', 'plant', 'forest', 'leaf', 'nature'] for item in result)
+                
+                # 3. Eski xabarni o'chirib, yangisini yuborish (edit_text o'rniga)
+                await msg.delete() 
                 
                 if is_tree:
                     await state.update_data(photo=photo.file_id)
-                    await msg.edit_text("✅ Daraxt aniqlandi! Endi joylashgan joyingizni yuboring.", reply_markup=loc_kb)
+                    await message.answer("✅ Daraxt aniqlandi! Endi joylashgan joyingizni yuboring.", reply_markup=loc_kb)
                     await state.set_state(TreePlanting.location)
                 else:
-                    await msg.edit_text("❌ Rasmda daraxt topilmadi. Iltimos, boshqa rasm yuboring.")
+                    await message.answer("❌ Rasmda daraxt topilmadi. Iltimos, boshqa rasm yuboring.")
+                    
         except Exception:
+            await msg.delete()
             await state.update_data(photo=photo.file_id)
-            await msg.edit_text("⚠️ AI tizimida uzilish, lekin rasm qabul qilindi. Lokatsiyani yuboring.", reply_markup=loc_kb)
+            await message.answer("⚠️ AI tizimida uzilish, lekin rasm qabul qilindi. Lokatsiyani yuboring.", reply_markup=loc_kb)
             await state.set_state(TreePlanting.location)
+
+
 
 @router.message(TreePlanting.location, F.location)
 async def save_tree(message: types.Message, state: FSMContext):
@@ -187,3 +198,4 @@ async def save_card_final(message: types.Message, state: FSMContext):
                 await state.clear()
             else:
                 await message.answer("❌ Karta saqlashda serverda xatolik.")
+
