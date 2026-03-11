@@ -7,8 +7,9 @@ from states import UserRegister, TreePlanting, CardUpdate
 from keyboards import main_menu, contact_keyboard
 
 router = Router()
+
+# Konfuralar
 BACKEND_URL = os.getenv("BACKEND_URL", "https://greenpaybackend-production.up.railway.app").rstrip('/')
-# DIQQAT: Hugging Face Tokeningizni quyidagi qo'shtirnoq ichiga qo'ying!
 HF_TOKEN = "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" 
 API_URL = "https://api-inference.huggingface.co/models/google/vit-base-patch16-224"
 
@@ -32,21 +33,20 @@ async def get_name(message: types.Message, state: FSMContext):
 @router.message(UserRegister.phone, F.contact)
 async def get_phone(message: types.Message, state: FSMContext):
     data = await state.get_data()
-    # Backend loglaridagi TypeErrorni oldini olish uchun 'full_name' ishlatamiz
-    # handlers.py ichida get_phone funksiyasi
-payload = {
-    "user_id": message.from_user.id,
-    "full_name": data['name'],  # <-- Kalit so'zni 'full_name' qiling
-    "phone": message.contact.phone_number
-}
-
+    # Payload indentatsiyasi to'g'rilandi
+    payload = {
+        "user_id": message.from_user.id,
+        "full_name": data.get('name'),
+        "phone": message.contact.phone_number
+    }
+    
     async with aiohttp.ClientSession() as session:
         async with session.post(f"{BACKEND_URL}/users/", json=payload) as resp:
             if resp.status in [200, 201]:
                 await message.answer("✅ Muvaffaqiyatli ro'yxatdan o'tdingiz!", reply_markup=main_menu())
                 await state.clear()
             else:
-                await message.answer("❌ Xatolik yuz berdi. Iltimos, qaytadan urunib ko'ring.")
+                await message.answer("❌ Xatolik yuz berdi. Iltimos, qaytadan urinib ko'ring.")
 
 # --- SHAXSIY KABINET ---
 @router.message(F.text == "👤 Shaxsiy kabinet")
@@ -82,7 +82,6 @@ async def check_tree_ai(message: types.Message, state: FSMContext):
     file = await message.bot.get_file(photo.file_id)
     photo_bytes = await message.bot.download_file(file.file_path)
 
-    # Lokatsiya tugmasini tayyorlash
     loc_kb = types.ReplyKeyboardMarkup(
         keyboard=[[types.KeyboardButton(text="📍 Joylashuvni yuborish", request_location=True)]], 
         resize_keyboard=True
@@ -103,7 +102,6 @@ async def check_tree_ai(message: types.Message, state: FSMContext):
                 else:
                     await msg.edit_text("❌ Rasmda daraxt topilmadi. Iltimos, boshqa rasm yuboring.")
         except Exception:
-            # AI ishlamasa ham jarayonni davom ettirish
             await state.update_data(photo=photo.file_id)
             await msg.edit_text("⚠️ AI tizimida uzilish, lekin rasm qabul qilindi. Lokatsiyani yuboring.", reply_markup=loc_kb)
             await state.set_state(TreePlanting.location)
@@ -111,7 +109,7 @@ async def check_tree_ai(message: types.Message, state: FSMContext):
 @router.message(TreePlanting.location, F.location)
 async def save_tree(message: types.Message, state: FSMContext):
     data = await state.get_data()
-    admin_id = "5833828220" # Sizning ID raqamingiz
+    admin_id = "5833828220" 
 
     payload = {
         "user_id": message.from_user.id,
@@ -132,9 +130,12 @@ async def save_tree(message: types.Message, state: FSMContext):
                         types.InlineKeyboardButton(text="❌ Rad etish", callback_data=f"tree_reject_{message.from_user.id}")
                     ]
                 ])
-                await message.bot.send_photo(admin_id, photo=data.get("photo"), 
-                                           caption=f"🌳 Yangi daraxt!\nKimdan: {message.from_user.full_name}\nNomi: {data.get('name')}\nManzil: {payload['latitude']}, {payload['longitude']}", 
-                                           reply_markup=kb)
+                await message.bot.send_photo(
+                    admin_id, 
+                    photo=data.get("photo"), 
+                    caption=f"🌳 Yangi daraxt!\nKimdan: {message.from_user.full_name}\nNomi: {data.get('name')}\nManzil: {payload['latitude']}, {payload['longitude']}", 
+                    reply_markup=kb
+                )
                 await state.clear()
             else:
                 await message.answer("❌ Serverga yuborishda xatolik.")
@@ -186,5 +187,3 @@ async def save_card_final(message: types.Message, state: FSMContext):
                 await state.clear()
             else:
                 await message.answer("❌ Karta saqlashda serverda xatolik.")
-
-
