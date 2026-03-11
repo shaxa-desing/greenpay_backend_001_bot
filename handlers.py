@@ -144,20 +144,31 @@ async def handle_tree_action(callback: types.CallbackQuery):
 
 # --- KARTA MA'LUMOTLARI ---
 @router.message(F.text == "💳 Karta ma'lumotlari")
-async def card_menu(message: types.Message, state: FSMContext):
+async def show_card_info(message: types.Message, state: FSMContext):
+    user_id = message.from_user.id
     async with aiohttp.ClientSession() as session:
-        async with session.get(f"{BACKEND_URL}/user/{message.from_user.id}") as resp:
+        async with session.get(f"{BACKEND_URL}/user/{user_id}") as resp:
             if resp.status == 200:
                 user_data = await resp.json()
                 if user_data.get("card"):
-                    text = f"Sizning kartangiz: `{user_data['card']}`\nYangilashni xohlaysizmi?"
+                    text = f"Sizning ulangan kartangiz: `{user_data['card']}`\n\nYangilashni xohlaysizmi?"
                     kb = types.InlineKeyboardMarkup(inline_keyboard=[
                         [types.InlineKeyboardButton(text="🔄 Yangilash", callback_data="update_card_start")]
                     ])
                     await message.answer(text, reply_markup=kb, parse_mode="Markdown")
                 else:
-                    await message.answer("Karta raqamingizni kiriting (16 xonali):")
+                    await message.answer("Sizda karta ulanmagan. Karta raqamingizni kiriting (16 xonali):")
                     await state.set_state(CardUpdate.card_number)
+            else:
+                await message.answer("Avval /start orqali ro'yxatdan o'ting.")
+
+# Inline tugma bosilganda yangilashni boshlash
+@router.callback_query(F.data == "update_card_start")
+async def update_card_callback(callback: types.CallbackQuery, state: FSMContext):
+    await callback.message.answer("Yangi karta raqamingizni kiriting:")
+    await state.set_state(CardUpdate.card_number)
+    await callback.answer()
+
 
 @router.callback_query(F.data == "update_card_start")
 async def start_update_card(callback: types.CallbackQuery, state: FSMContext):
@@ -190,3 +201,4 @@ async def save_card_final(message: types.Message, state: FSMContext):
                 await state.clear()
             else:
                 await message.answer("❌ Xatolik yuz berdi.")
+
