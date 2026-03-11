@@ -33,11 +33,13 @@ async def get_name(message: types.Message, state: FSMContext):
 async def get_phone(message: types.Message, state: FSMContext):
     data = await state.get_data()
     # Backend loglaridagi TypeErrorni oldini olish uchun 'full_name' ishlatamiz
-    payload = {
-        "user_id": message.from_user.id,
-        "full_name": data['name'], 
-        "phone": message.contact.phone_number
-    }
+    # handlers.py ichida get_phone funksiyasi
+payload = {
+    "user_id": message.from_user.id,
+    "full_name": data['name'],  # <-- Kalit so'zni 'full_name' qiling
+    "phone": message.contact.phone_number
+}
+
     async with aiohttp.ClientSession() as session:
         async with session.post(f"{BACKEND_URL}/users/", json=payload) as resp:
             if resp.status in [200, 201]:
@@ -184,4 +186,5 @@ async def save_card_final(message: types.Message, state: FSMContext):
                 await state.clear()
             else:
                 await message.answer("❌ Karta saqlashda serverda xatolik.")
+
 
