@@ -35,9 +35,10 @@ async def get_name(message: types.Message, state: FSMContext):
 async def get_phone(message: types.Message, state: FSMContext):
     data = await state.get_data()
     # Payload indentatsiyasi to'g'rilandi
+    # handlers.py ichidagi ro'yxatdan o'tish qismi:
     payload = {
         "user_id": message.from_user.id,
-        "full_name": data.get('name'),
+        "full_name": data.get('name'), # 'name' o'rniga 'full_name' bo'lishi ham mumkin, tekshiring
         "phone": message.contact.phone_number
     }
     
@@ -228,6 +229,7 @@ async def save_card_final(message: types.Message, state: FSMContext):
                 # Xatolikni batafsilroq ko'rsatish
                 print(f"Server error: {resp.status}, Body: {response_text}")
                 await message.answer(f"❌ Karta saqlashda xatolik yuz berdi. (Status: {resp.status})")
+
 
 
 
