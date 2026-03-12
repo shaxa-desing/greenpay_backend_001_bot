@@ -210,15 +210,25 @@ async def process_card_number(message: types.Message, state: FSMContext):
 @router.message(CardUpdate.phone_number, F.contact)
 async def save_card_final(message: types.Message, state: FSMContext):
     data = await state.get_data()
-    payload = {"card": data.get("card_number"), "phone": message.contact.phone_number}
+    # Karta raqami va telefon raqamini to'g'ri shaklda yuborish
+    payload = {
+        "card": str(data.get("card_number")),
+        "phone": str(message.contact.phone_number)
+    }
 
     async with aiohttp.ClientSession() as session:
-        async with session.post(f"{BACKEND_URL}/update-card/{message.from_user.id}", json=payload) as resp:
+        # URL va payloadni logga chiqaramiz (xatoni aniqlash uchun)
+        url = f"{BACKEND_URL}/update-card/{message.from_user.id}"
+        async with session.post(url, json=payload) as resp:
+            response_text = await resp.text() # Server nima deganini ko'ramiz
             if resp.status == 200:
                 await message.answer("✅ Karta muvaffaqiyatli saqlandi!", reply_markup=main_menu())
                 await state.clear()
             else:
-                await message.answer("❌ Karta saqlashda serverda xatolik.")
+                # Xatolikni batafsilroq ko'rsatish
+                print(f"Server error: {resp.status}, Body: {response_text}")
+                await message.answer(f"❌ Karta saqlashda xatolik yuz berdi. (Status: {resp.status})")
+
 
 
 
