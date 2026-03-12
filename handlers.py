@@ -11,7 +11,7 @@ router = Router()
 
 # Konfuralar
 BACKEND_URL = os.getenv("BACKEND_URL", "https://greenpaybackend-production.up.railway.app").rstrip('/')
-HF_TOKEN = "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" 
+HF_TOKEN = "" 
 API_URL = "https://api-inference.huggingface.co/models/google/vit-base-patch16-224"
 
 # --- START & RO'YXATDAN O'TISH ---
@@ -198,4 +198,5 @@ async def save_card_final(message: types.Message, state: FSMContext):
                 await state.clear()
             else:
                 await message.answer("❌ Karta saqlashda serverda xatolik.")
+
 
