@@ -11,7 +11,7 @@ router = Router()
 
 # Konfuralar
 BACKEND_URL = os.getenv("BACKEND_URL", "https://greenpaybackend-production.up.railway.app").rstrip('/')
-HF_TOKEN = "" 
+HF_TOKEN = "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" 
 API_URL = "https://api-inference.huggingface.co/models/google/vit-base-patch16-224"
 
 # --- START & RO'YXATDAN O'TISH ---
@@ -76,44 +76,65 @@ async def get_tree_name(message: types.Message, state: FSMContext):
     await message.answer("📸 Daraxtning aniq rasmini yuboring (AI tekshiradi):")
     await state.set_state(TreePlanting.photo)
 
+# --- DARAXT EKISH VA AI TEKSHIRUV ---
 @router.message(TreePlanting.photo, F.photo)
 async def check_tree_ai(message: types.Message, state: FSMContext):
     # 1. Kutib turish xabarini yuboramiz
-    msg = await message.answer("🔍 AI rasmda nima borligini aniqlamoqda...")
+    msg = await message.answer("🔍 AI rasmda nima borligini tezkor tekshirmoqda...")
     
+    # Telegramdan eng yuqori sifatli rasmni olamiz
     photo = message.photo[-1]
     file = await message.bot.get_file(photo.file_id)
     photo_bytes = await message.bot.download_file(file.file_path)
 
-    # 2. ReplyKeyboardMarkup (pastki tugma)
+    # 2. Lokatsiya sorash uchun tugma (faqat tasdiqlansa ko'rinadi)
     loc_kb = types.ReplyKeyboardMarkup(
         keyboard=[[types.KeyboardButton(text="📍 Joylashuvni yuborish", request_location=True)]], 
         resize_keyboard=True,
-        one_time_keyboard=True # Tugma bosilgandan so'ng yo'qolishi uchun
+        one_time_keyboard=True
     )
 
     headers = {"Authorization": f"Bearer {HF_TOKEN}"}
+    
+    # API dan keladigan kalit so'zlar ro'yxati (AI daraxtni taniy olishi uchun)
+    tree_keywords = ['tree', 'plant', 'forest', 'leaf', 'nature', 'wood', 'pine', 'oak']
+
     async with aiohttp.ClientSession() as session:
         try:
+            # HuggingFace API ga so'rov yuborish (Sizning oldingi kodingizdek)
             async with session.post(API_URL, headers=headers, data=photo_bytes) as resp:
-                result = await resp.json()
-                is_tree = any(item.get('label', '').lower() in ['tree', 'plant', 'forest', 'leaf', 'nature'] for item in result)
-                
-                # 3. Eski xabarni o'chirib, yangisini yuborish (edit_text o'rniga)
-                await msg.delete() 
-                
-                if is_tree:
-                    await state.update_data(photo=photo.file_id)
-                    await message.answer("✅ Daraxt aniqlandi! Endi joylashgan joyingizni yuboring.", reply_markup=loc_kb)
-                    await state.set_state(TreePlanting.location)
-                else:
-                    await message.answer("❌ Rasmda daraxt topilmadi. Iltimos, boshqa rasm yuboring.")
+                if resp.status == 200:
+                    result = await resp.json()
                     
-        except Exception:
+                    # Natijalar ichidan daraxtga oid so'zlarni qidiramiz
+                    # is_tree = True bo'ladi, agar topilsa
+                    is_tree = any(item.get('label', '').lower() in tree_keywords for item in result)
+                    
+                    # 3. Kutish xabarini o'chiramiz
+                    await msg.delete() 
+                    
+                    if is_tree:
+                        await state.update_data(photo=photo.file_id)
+                        await message.answer(
+                            "✅ Ajoyib! AI rasmda daraxt borligini tasdiqladi.\nEndi daraxt joylashgan lokatsiyani yuboring:", 
+                            reply_markup=loc_kb
+                        )
+                        await state.set_state(TreePlanting.location)
+                    else:
+                        await message.answer(
+                            "❌ Kechirasiz, AI tizimi rasmda daraxtni aniqlay olmadi.\nIltimos, yorug'roq joyda va daraxt to'liq ko'rinadigan qilib qayta rasm yuboring."
+                        )
+                        # State o'zgarmaydi, bot yana rasm kutishda davom etadi
+                else:
+                    await msg.delete()
+                    await message.answer("⚠️ AI xizmatida vaqtincha uzilish. Iltimos, birozdan so'ng qayta urinib ko'ring.")
+
+        except Exception as e:
             await msg.delete()
-            await state.update_data(photo=photo.file_id)
-            await message.answer("⚠️ AI tizimida uzilish, lekin rasm qabul qilindi. Lokatsiyani yuboring.", reply_markup=loc_kb)
-            await state.set_state(TreePlanting.location)
+            print(f"AI tekshiruvda xatolik: {e}")
+            await message.answer("⚠️ Kutilmagan xatolik yuz berdi. Iltimos, qayta urinib ko'ring.")
+
+
 
 
 
@@ -198,5 +219,6 @@ async def save_card_final(message: types.Message, state: FSMContext):
                 await state.clear()
             else:
                 await message.answer("❌ Karta saqlashda serverda xatolik.")
+
 
 
