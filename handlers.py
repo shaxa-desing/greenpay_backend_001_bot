@@ -10,7 +10,7 @@ from keyboards import main_menu, contact_keyboard, tree_category_kb, fruit_trees
 router = Router()
 
 # Mahalliy test qilish uchun localhost, serverga qo'yganda o'zgaradi
-BACKEND_URL = os.getenv("BACKEND_URL", "http://127.0.0.1:8000").rstrip('/')
+BACKEND_URL = 'https://greenpaybackend-production.up.railway.app'
 ADMIN_ID = 5833828220 
 
 # Narxlar ro'yxati (Baza = 5000 so'm, mevalar narxi qadam-baqadam oshadi)
