@@ -5,7 +5,8 @@ class UserRegister(StatesGroup):
     phone = State()
 
 class TreePlanting(StatesGroup):
-    name = State()
+    category = State() # Mevali / Manzarali
+    name = State()     # Olma, Gilos / Archa...
     photo = State()
     location = State()
 
